@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Find and Replace</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Georgia, serif;
+      margin: 20px;
+      padding: 20px;
+      background-color: #2a2a2a;
+      color: #B5AEE8;
+    }
+
+    #container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .find-replace-pair {
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #1f1f1f;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: grab;
+    }
+
+    .find-replace-pair label {
+      margin-right: 10px;
+    }
+
+    .find-replace-pair input {
+      margin-right: 10px;
+    }
+
+    .remove-button {
+      margin-left: 10px;
+      color: red;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 2px;
+    }
+
+    #inputAreaContainer {
+      margin-bottom: 20px;
+    }
+
+    .toggles {
+      margin-bottom: 20px;
+    }
+
+    .toggles label {
+      margin-right: 15px;
+    }
+
+    textarea {
+      width: 100%;
+    }
+
+    #resultText {
+      background-color: #C7BAE3;
+    }
+
+    button {
+      background-color: #B287CC;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-family: inherit;
+      transition: background-color 0.2s ease;
+    }
+
+    button:hover {
+      background-color: #A84B8C;
+    }
+
+    #clearBtn {
+      background-color: #A84A46;
+      color: white;
+    }
+
+    #clearBtn:hover {
+      background-color: #A90101;
+    }
+
+    #scrollBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 99;
+      background-color: #B287CC;
+      color: white;
+      width: 48px;
+      height: 48px;
+      font-size: 24px;
+      font-weight: bold;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #replacementSection {
+      margin-top: 20px;
+      text-align: left;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    #replacementDetails {
+      display: none;
+      margin-top: 10px;
+    }
+
+    #toggleReplacementsBtn {
+      background-color: #2a2a2a;
+    }
+
+    @media (max-width: 768px) {
+      .find-replace-pair {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: left;
+      }
+
+      .find-replace-pair label,
+      .find-replace-pair input,
+      .remove-button {
+        width: 100%;
+        margin: 5px 0;
+      }
+
+      button {
+        width: 100%;
+        margin: 5px 0;
+      }
+
+      #copyButton {
+        width: 100%;
+      }
+
+      .toggles {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .toggles label {
+        margin-bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>Find and Replace Text</h1>
+
+    <textarea id="inputText" rows="10" placeholder="Enter your text here..."></textarea><br>
+    <button id="clearBtn" onclick="clearInputText()">Clear Input</button>
+
+    <h2>Find and Replace List</h2>
+
+    <button onclick="exportList()">Export List</button>
+    <button onclick="importList()">Import List</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
+
+    <div id="findReplaceContainer"></div>
+    <button onclick="addFindReplacePair()">Add</button>
+    <button id="clearBtn" onclick="clearFindReplaceInputs()">Clear</button>
+
+    <div class="toggles">
+      <label><input type="checkbox" id="matchCase"> Match Case</label>
+      <label><input type="checkbox" id="wholeWords"> Whole Words</label>
+    </div>
+
+    <button onclick="replaceText()">Replace</button><br><br>
+
+    <h2>Result:</h2>
+    <textarea id="resultText" rows="10" readonly></textarea>
+    <button id="copyButton" onclick="copyResultText()" style="display:none">Copy Result</button>
+  </div>
+
+  <div id="replacementSection">
+    <button id="toggleReplacementsBtn" onclick="toggleReplacements()" style="display:none;">▼ Replacements</button>
+    <div id="replacementDetails"></div>
+  </div>
+
+  <button id="scrollBtn" onclick="toggleScroll()" title="Scroll">↓</button>
+
+  <!-- Load SortableJS -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+  <script>
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function addFindReplacePair(find = '', replace = '') {
+      const container = document.getElementById('findReplaceContainer');
+      const div = document.createElement('div');
+      div.className = 'find-replace-pair';
+      div.innerHTML = `
+        <label>Find:</label><input class="find" value="${find}">
+        <label>Replace:</label><input class="replace" value="${replace}">
+        <span class="remove-button" onclick="removePair(this)">✖</span>
+      `;
+      container.appendChild(div);
+    }
+
+    function removePair(button) {
+      const container = document.getElementById('findReplaceContainer');
+      if (container.children.length > 1) button.parentElement.remove();
+      else alert("At least one pair must remain.");
+    }
+
+    function clearInputText() {
+      document.getElementById("inputText").value = '';
+      toggleCopyButtonVisibility();
+    }
+
+    function clearFindReplaceInputs() {
+      document.getElementById('findReplaceContainer').innerHTML = '';
+      addFindReplacePair();
+    }
+
+    function replaceText() {
+      let text = document.getElementById("inputText").value;
+      const finds = document.querySelectorAll('.find');
+      const replaces = document.querySelectorAll('.replace');
+      const matchCase = document.getElementById("matchCase").checked;
+      const wholeWords = document.getElementById("wholeWords").checked;
+      const flags = matchCase ? 'g' : 'gi';
+
+      const counts = [];
+
+      finds.forEach((findEl, i) => {
+        const find = findEl.value;
+        const replace = replaces[i].value;
+        if (find) {
+          let pattern = wholeWords ? `\\b${escapeRegExp(find)}\\b` : escapeRegExp(find);
+          try {
+            const regex = new RegExp(pattern, flags);
+            const matchCount = (text.match(regex) || []).length;
+            text = text.replace(regex, replace);
+            if (matchCount > 0) {
+              counts.push(`Replaced " ${find} " with " ${replace} " ${matchCount} time(s)`);
+            }
+          } catch (e) {
+            console.error(`Invalid pattern "${pattern}"`, e);
+          }
+        }
+      });
+
+      document.getElementById("resultText").value = text;
+      toggleCopyButtonVisibility();
+
+      const replacementDetails = document.getElementById("replacementDetails");
+      const toggleBtn = document.getElementById("toggleReplacementsBtn");
+
+      if (counts.length > 0) {
+        replacementDetails.innerHTML = `➤ ` + counts.join('<br>➤ ');
+        toggleBtn.style.display = 'inline-block';
+        replacementDetails.style.display = 'none';
+        toggleBtn.textContent = "▼ Replacements";
+      } else {
+        replacementDetails.innerHTML = '';
+        toggleBtn.style.display = 'none';
+      }
+    }
+
+    function toggleReplacements() {
+      const details = document.getElementById("replacementDetails");
+      const toggleBtn = document.getElementById("toggleReplacementsBtn");
+
+      if (details.style.display === "none") {
+        details.style.display = "block";
+        toggleBtn.textContent = "▲ Replacements";
+      } else {
+        details.style.display = "none";
+        toggleBtn.textContent = "▼ Replacements";
+      }
+    }
+
+    function toggleCopyButtonVisibility() {
+      const resultText = document.getElementById("resultText");
+      const copyButton = document.getElementById("copyButton");
+      copyButton.style.display = resultText.value.trim() ? 'inline-block' : 'none';
+    }
+
+    function copyResultText() {
+      const resultText = document.getElementById("resultText");
+      resultText.select();
+      document.execCommand('copy');
+      const copyButton = document.getElementById("copyButton");
+      copyButton.textContent = "Copied!";
+      setTimeout(() => copyButton.textContent = "Copy Result", 2000);
+    }
+
+    function exportList() {
+      const pairs = Array.from(document.querySelectorAll('.find-replace-pair')).map(pair => {
+        return {
+          find: pair.querySelector('.find').value,
+          replace: pair.querySelector('.replace').value
+        };
+      });
+      const blob = new Blob([JSON.stringify(pairs, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'find_replace_list.json';
+      a.click();
+    }
+
+    function importList() {
+      const input = document.getElementById('importFile');
+      input.value = '';
+      input.click();
+    }
+
+    function handleImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const list = JSON.parse(e.target.result);
+          if (!Array.isArray(list)) throw new Error("Invalid format");
+          const container = document.getElementById('findReplaceContainer');
+          container.innerHTML = '';
+          list.forEach(({ find, replace }) => addFindReplacePair(find, replace));
+        } catch (err) {
+          alert("Failed to import list. Ensure it's valid JSON.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    let atBottom = false;
+
+    function toggleScroll() {
+      if (atBottom) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }
+      atBottom = !atBottom;
+      document.getElementById("scrollBtn").textContent = atBottom ? "↑" : "↓";
+    }
+
+    new Sortable(document.getElementById('findReplaceContainer'), {
+      animation: 150,
+      handle: '.find-replace-pair',
+    });
+
+    window.onload = () => {
+      addFindReplacePair();
+    };
+  </script>
+</body>
+</html>
