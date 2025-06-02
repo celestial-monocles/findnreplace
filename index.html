@@ -16,8 +16,8 @@
       background-color: #2a2a2a;
       color: #B5AEE8;
     }
-	
-	a {
+
+    a {
       color: #B5AEE8;
       text-decoration: none;
     }
@@ -145,6 +145,15 @@
       background-color: #2a2a2a;
     }
 
+    #toggleFindReplaceBtn {
+      background-color: transparent;
+      color: #B5AEE8;
+      font-size: 1.2em;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
     @media (max-width: 768px) {
       .find-replace-pair {
         flex-direction: column;
@@ -188,19 +197,23 @@
     <textarea id="inputText" rows="10" placeholder="Enter your text here..."></textarea><br>
     <button id="clearBtn" onclick="clearInputText()">Clear Input</button>
 
-    <h2>Find and Replace List</h2>
+    <h2>
+      <button onclick="toggleFindReplaceSection()" id="toggleFindReplaceBtn">▼ Find and Replace List</button>
+    </h2>
 
-    <button onclick="exportList()">Export List</button>
-    <button onclick="importList()">Import List</button>
-    <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
+    <div id="findReplaceSection" style="display: block;">
+      <button onclick="exportList()">Export List</button>
+      <button onclick="importList()">Import List</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
 
-    <div id="findReplaceContainer"></div>
-    <button onclick="addFindReplacePair()">Add</button>
-    <button id="clearBtn" onclick="clearFindReplaceInputs()">Clear</button>
+      <div id="findReplaceContainer"></div>
+      <button onclick="addFindReplacePair()">Add</button>
+      <button id="clearBtn" onclick="clearFindReplaceInputs()">Clear</button>
 
-    <div class="toggles">
-      <label><input type="checkbox" id="matchCase"> Match Case</label>
-      <label><input type="checkbox" id="wholeWords"> Whole Words</label>
+      <div class="toggles">
+        <label><input type="checkbox" id="matchCase"> Match Case</label>
+        <label><input type="checkbox" id="wholeWords"> Whole Words</label>
+      </div>
     </div>
 
     <button onclick="replaceText()">Replace</button><br><br>
@@ -211,7 +224,7 @@
   </div>
 
   <div id="replacementSection">
-    <button id="toggleReplacementsBtn" onclick="toggleReplacements()" style="display:none;">▼ Replacements</button>
+    <button id="toggleReplacementsBtn" onclick="toggleReplacements()" style="display:none;">- Replacements</button>
     <div id="replacementDetails"></div>
   </div>
 
@@ -220,6 +233,14 @@
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
   <script>
+  
+  document.getElementById("inputText").addEventListener("keydown", function(event) {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault(); // Prevent newline
+    replaceText();
+  }
+});
+
     function escapeRegExp(string) {
       return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
@@ -291,7 +312,7 @@
         replacementDetails.innerHTML = `➤ ` + counts.join('<br>➤ ');
         toggleBtn.style.display = 'inline-block';
         replacementDetails.style.display = 'none';
-        toggleBtn.textContent = "▼ Replacements";
+        toggleBtn.textContent = "- Replacements";
       } else {
         replacementDetails.innerHTML = '';
         toggleBtn.style.display = 'none';
@@ -304,10 +325,10 @@
 
       if (details.style.display === "none") {
         details.style.display = "block";
-        toggleBtn.textContent = "▲ Replacements";
+        toggleBtn.textContent = "- Replacements";
       } else {
         details.style.display = "none";
-        toggleBtn.textContent = "▼ Replacements";
+        toggleBtn.textContent = "+ Replacements";
       }
     }
 
@@ -374,6 +395,19 @@
       }
       atBottom = !atBottom;
       document.getElementById("scrollBtn").textContent = atBottom ? "↑" : "↓";
+    }
+
+    function toggleFindReplaceSection() {
+      const section = document.getElementById("findReplaceSection");
+      const btn = document.getElementById("toggleFindReplaceBtn");
+
+      if (section.style.display === "none") {
+        section.style.display = "block";
+        btn.textContent = "▼ Find and Replace List";
+      } else {
+        section.style.display = "none";
+        btn.textContent = "▲ Find and Replace List";
+      }
     }
 
     new Sortable(document.getElementById('findReplaceContainer'), {
