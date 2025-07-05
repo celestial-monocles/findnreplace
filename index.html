@@ -77,10 +77,26 @@
 
     textarea {
       width: 100%;
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      resize: vertical;
+    }
+
+    #inputText {
+      height: 150px;
     }
 
     #resultText {
       background-color: #C7BAE3;
+      color: #000;
+      height: 150px;
+      border: none;
+      border-radius: 6px;
+      resize: vertical;
     }
 
     button {
@@ -208,7 +224,7 @@
 
       <div id="findReplaceContainer"></div>
       <button onclick="addFindReplacePair()">Add</button>
-      <button id="clearBtn" onclick="clearFindReplaceInputs()">Clear</button>
+      <button id="clearFindBtn" onclick="clearFindReplaceInputs()">Clear</button>
 
       <div class="toggles">
         <label><input type="checkbox" id="matchCase"> Match Case</label>
@@ -233,13 +249,12 @@
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
   <script>
-  
-  document.getElementById("inputText").addEventListener("keydown", function(event) {
-  if (event.key === "Enter" && !event.shiftKey) {
-    event.preventDefault(); // Prevent newline
-    replaceText();
-  }
-});
+    document.getElementById("inputText").addEventListener("keydown", function(event) {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault(); // Prevent newline
+        replaceText();
+      }
+    });
 
     function escapeRegExp(string) {
       return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -276,6 +291,10 @@
 
     function replaceText() {
       let text = document.getElementById("inputText").value;
+
+      // Normalize line breaks
+      text = text.replace(/[\u2028\u2029\u0085\u000B\u000C]/g, '\n').replace(/\r\n|\r/g, '\n');
+
       const finds = document.querySelectorAll('.find');
       const replaces = document.querySelectorAll('.replace');
       const matchCase = document.getElementById("matchCase").checked;
@@ -302,7 +321,8 @@
         }
       });
 
-      document.getElementById("resultText").value = text;
+      const resultText = document.getElementById("resultText");
+      resultText.value = text;
       toggleCopyButtonVisibility();
 
       const replacementDetails = document.getElementById("replacementDetails");
@@ -340,11 +360,20 @@
 
     function copyResultText() {
       const resultText = document.getElementById("resultText");
-      resultText.select();
-      document.execCommand('copy');
       const copyButton = document.getElementById("copyButton");
-      copyButton.textContent = "Copied!";
-      setTimeout(() => copyButton.textContent = "Copy Result", 2000);
+
+      navigator.clipboard.writeText(resultText.value)
+        .then(() => {
+          copyButton.textContent = "Copied!";
+          copyButton.disabled = true;
+          setTimeout(() => {
+            copyButton.textContent = "Copy Result";
+            copyButton.disabled = false;
+          }, 2000);
+        })
+        .catch(() => {
+          alert("Failed to copy. Please copy manually.");
+        });
     }
 
     function exportList() {
@@ -417,6 +446,7 @@
 
     window.onload = () => {
       addFindReplacePair();
+      toggleCopyButtonVisibility();
     };
   </script>
 </body>
