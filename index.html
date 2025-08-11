@@ -65,6 +65,7 @@
 
     #inputAreaContainer {
       margin-bottom: 20px;
+      position: relative;
     }
 
     .toggles {
@@ -170,6 +171,20 @@
       font-weight: bold;
     }
 
+    #pasteBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      font-size: 0.8em;
+      background-color: #B287CC;
+      z-index: 1;
+    }
+
+    #pasteBtn:hover {
+      background-color: #A84B8C;
+    }
+
     @media (max-width: 768px) {
       .find-replace-pair {
         flex-direction: column;
@@ -203,6 +218,22 @@
       .toggles label {
         margin-bottom: 10px;
       }
+
+      /* Fix for paste button in mobile */
+      #pasteBtn {
+        position: relative;
+        top: auto;
+        right: auto;
+        display: block;
+        width: auto;
+        margin: 5px 0;
+        text-align: center;
+      }
+
+      #inputAreaContainer {
+        display: flex;
+        flex-direction: column;
+      }
     }
   </style>
 </head>
@@ -210,7 +241,10 @@
   <div id="container">
     <h1><a href="https://celestial-monocles.github.io/findandreplace/">Find and Replace Text</a></h1>
 
-    <textarea id="inputText" rows="10" placeholder="Enter your text here..."></textarea><br>
+    <div id="inputAreaContainer">
+      <textarea id="inputText" rows="10" placeholder="Enter your text here..."></textarea>
+      <button id="pasteBtn" title="Paste from clipboard">Paste</button>
+    </div>
     <button id="clearBtn" onclick="clearInputText()">Clear Input</button>
 
     <h2>
@@ -253,6 +287,18 @@
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault(); // Prevent newline
         replaceText();
+      }
+    });
+
+    // Add paste functionality
+    document.getElementById("pasteBtn").addEventListener("click", async function() {
+      try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById("inputText").value = text;
+        toggleCopyButtonVisibility();
+      } catch (err) {
+        alert("Failed to paste. Please ensure clipboard permissions are granted.");
+        console.error("Failed to read clipboard contents:", err);
       }
     });
 
